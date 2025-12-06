@@ -39,17 +39,37 @@ export const ChatProvider = ({ children }) => {
     if (!socket) return;
 
     socket.on('new_message', ({ message }) => {
-      setMessages(prev => ({
-        ...prev,
-        [message.room]: [...(prev[message.room] || []), message]
-      }));
+      setMessages(prev => {
+        const roomMessages = prev[message.room] || [];
+        // Check if message already exists by ID to prevent duplicates
+        const messageExists = roomMessages.some(m => m._id === message._id);
+        
+        if (messageExists) {
+          return prev; // Don't add duplicate
+        }
+        
+        return {
+          ...prev,
+          [message.room]: [...roomMessages, message]
+        };
+      });
     });
 
     socket.on('file_uploaded', ({ message }) => {
-      setMessages(prev => ({
-        ...prev,
-        [message.room]: [...(prev[message.room] || []), message]
-      }));
+      setMessages(prev => {
+        const roomMessages = prev[message.room] || [];
+        // Check if message already exists by ID to prevent duplicates
+        const messageExists = roomMessages.some(m => m._id === message._id);
+        
+        if (messageExists) {
+          return prev; // Don't add duplicate
+        }
+        
+        return {
+          ...prev,
+          [message.room]: [...roomMessages, message]
+        };
+      });
     });
 
     socket.on('typing_update', ({ roomId, userId, username, isTyping }) => {
