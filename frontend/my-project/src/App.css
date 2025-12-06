@@ -932,6 +932,14 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
+/* Special styling for image messages - no padding/border */
+.message-content:has(.message-image-container) {
+  padding: 0;
+  background-color: transparent !important;
+  box-shadow: none;
+  border: none !important;
+}
+
 .own-message .message-content {
   background-color: var(--message-own);
   color: white;
@@ -959,25 +967,41 @@ body {
 
 /* File and Image Messages */
 .message-image-container {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 6px;
   max-width: 100%;
+  overflow: hidden;
+  border-radius: 8px;
 }
 
 .message-image {
-  max-width: 300px;
+  max-width: 320px;
   max-height: 400px;
-  width: 100%;
+  width: auto;
   height: auto;
-  border-radius: 12px;
+  display: block;
   object-fit: cover;
   cursor: pointer;
   transition: transform 0.2s;
+  border-radius: 8px;
 }
 
 .message-image:hover {
-  transform: scale(1.02);
+  transform: scale(1.01);
+}
+
+.message-image-container .message-time {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  opacity: 1;
+  backdrop-filter: blur(4px);
 }
 
 .message-file-container {
