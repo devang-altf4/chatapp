@@ -1,0 +1,90 @@
+import { useState, useEffect, useRef } from 'react';
+import { useChat } from '../context/ChatContext';
+import { useAuth } from '../context/AuthContext';
+
+const MessageInput = () => {
+  const [message, setMessage] = useState('');
+  const { sendMessage, startTyping, stopTyping, currentRoom } = useChat();
+  const typingTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        stopTyping();
+      }
+    };
+  }, [currentRoom]);
+
+  const handleChange = (e) => {
+    setMessage(e.target.value);
+
+    if (e.target.value.length > 0) {
+      startTyping();
+
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      typingTimeoutRef.current = setTimeout(() => {
+        stopTyping();
+      }, 1000);
+    } else {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      stopTyping();
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    if (!message.trim()) return;
+
+    sendMessage(message.trim());
+    setMessage('');
+    
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    stopTyping();
+  };
+
+  if (!currentRoom) return null;
+
+  return (
+    <form onSubmit={handleSubmit} className="message-input-form">
+      <button type="button" className="btn-attachment" title="Attach file">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M21.4399 11.05L12.2499 20.24C11.1242 21.3658 9.59718 21.9983 8.00489 21.9983C6.41261 21.9983 4.88558 21.3658 3.75989 20.24C2.63421 19.1143 2.00171 17.5873 2.00171 15.995C2.00171 14.4027 2.63421 12.8757 3.75989 11.75L12.9499 2.56C13.7005 1.80944 14.7182 1.38787 15.7799 1.38787C16.8416 1.38787 17.8593 1.80944 18.6099 2.56C19.3605 3.31056 19.782 4.32827 19.782 5.39C19.782 6.45173 19.3605 7.46944 18.6099 8.22L9.40989 17.41C9.03462 17.7853 8.52573 17.996 7.99489 17.996C7.46405 17.996 6.95516 17.7853 6.57989 17.41C6.20462 17.0347 5.99391 16.5258 5.99391 15.995C5.99391 15.4642 6.20462 14.9553 6.57989 14.58L15.0699 6.1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+      <input
+        type="text"
+        value={message}
+        onChange={handleChange}
+        placeholder="Type a message..."
+        className="message-input"
+      />
+      <button type="button" className="btn-emoji" title="Add emoji">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M8 14C8 14 9.5 16 12 16C14.5 16 16 14 16 14M15 9H15.01M9 9H9.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+      <button type="button" className="btn-more" title="More options">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15M17 8L12 3M12 3L7 8M12 3V15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+      <button type="submit" className="btn-send" disabled={!message.trim()}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+    </form>
+  );
+};
+
+export default MessageInput;
