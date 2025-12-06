@@ -121,6 +121,35 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateProfile = async (username, profilePicture) => {
+    try {
+      const formData = new FormData();
+      formData.append('username', username);
+      if (profilePicture) {
+        formData.append('profilePicture', profilePicture);
+      }
+
+      const response = await api.put('/users/profile', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      const { user: updatedUser } = response.data;
+
+      // Update local storage and state
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to update profile'
+      };
+    }
+  };
+
   const value = {
     user,
     token,
@@ -128,6 +157,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    updateProfile,
     isAuthenticated: !!user,
   };
 
