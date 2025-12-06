@@ -217,6 +217,32 @@ export const ChatProvider = ({ children }) => {
     }
   };
 
+  const deleteRoom = async (roomId) => {
+    try {
+      await api.delete(`/rooms/${roomId}`);
+      
+      // Remove room from state
+      setRooms(prev => prev.filter(r => r._id !== roomId));
+      
+      // Clear current room if it's the one being deleted
+      if (currentRoom?._id === roomId) {
+        setCurrentRoom(null);
+      }
+      
+      // Clear messages for this room
+      setMessages(prev => {
+        const newMessages = { ...prev };
+        delete newMessages[roomId];
+        return newMessages;
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting room:', error);
+      throw error;
+    }
+  };
+
   const value = {
     rooms,
     currentRoom,
@@ -231,6 +257,7 @@ export const ChatProvider = ({ children }) => {
     stopTyping,
     createRoom,
     createPrivateRoom,
+    deleteRoom,
     loadRooms,
     loadUsers,
   };

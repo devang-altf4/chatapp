@@ -157,4 +157,34 @@ router.get('/:roomId', authMiddleware, async (req, res) => {
   }
 });
 
+// Delete a room
+router.delete('/:roomId', authMiddleware, async (req, res) => {
+  try {
+    const room = await Room.findById(req.params.roomId);
+
+    if (!room) {
+      return res.status(404).json({ message: 'Room not found' });
+    }
+
+    // Check if user is the creator or a participant
+    const isCreator = room.createdBy.toString() === req.user._id.toString();
+    const isParticipant = room.participants.some(p => p.toString() === req.user._id.toString());
+
+    if (!isCreator && !isParticipant) {
+      return res.status(403).json({ message: 'Not authorized to delete this room' });
+    }
+
+    // Delete all messages in the room
+    await Message.deleteMany({ room: req.params.roomId });
+
+    // Delete the room
+    await Room.findByIdAndDelete(req.params.roomId);
+
+    res.json({ message: 'Room deleted successfully' });
+  } catch (error) {
+    console.error('Delete room error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;
