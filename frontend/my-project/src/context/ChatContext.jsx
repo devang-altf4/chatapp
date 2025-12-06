@@ -45,6 +45,13 @@ export const ChatProvider = ({ children }) => {
       }));
     });
 
+    socket.on('file_uploaded', ({ message }) => {
+      setMessages(prev => ({
+        ...prev,
+        [message.room]: [...(prev[message.room] || []), message]
+      }));
+    });
+
     socket.on('typing_update', ({ roomId, userId, username, isTyping }) => {
       setTypingUsers(prev => {
         const roomTyping = prev[roomId] || [];
@@ -174,6 +181,42 @@ export const ChatProvider = ({ children }) => {
     });
   };
 
+  const sendFileMessage = async (file) => {
+    try {
+      if (!currentRoom) return;
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('roomId', currentRoom._id);
+
+      const response = await api.post('/messages/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      // Add the message to state
+      setMessages(prev => ({
+        ...prev,
+        [currentRoom._id]: [...(prev[currentRoom._id] || []), response.data.message]
+      }));
+
+      // Emit socket event to notify other users
+      const socket = getSocket();
+      if (socket) {
+        socket.emit('file_uploaded', {
+          message: response.data.message,
+          roomId: currentRoom._id
+        });
+      }
+
+      return response.data.message;
+    } catch (error) {
+      console.error('Error sending file:', error);
+      throw error;
+    }
+  };
+
   const startTyping = () => {
     const socket = getSocket();
     if (!socket || !currentRoom) return;
@@ -253,6 +296,7 @@ export const ChatProvider = ({ children }) => {
     joinRoom,
     leaveRoom,
     sendMessage,
+    sendFileMessage,
     startTyping,
     stopTyping,
     createRoom,

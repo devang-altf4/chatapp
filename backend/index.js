@@ -37,6 +37,9 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Serve uploaded files
+app.use('/uploads', express.static('uploads'));
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/rooms', roomRoutes);
@@ -224,6 +227,20 @@ io.on('connection', async (socket) => {
     } catch (error) {
       console.error('Error sending message:', error);
       socket.emit('error', { message: 'Error sending message' });
+    }
+  });
+
+  // Handle file upload broadcast
+  socket.on('file_uploaded', async (data) => {
+    try {
+      const { message, roomId } = data;
+      
+      // Broadcast to other users in the room
+      socket.to(roomId).emit('file_uploaded', {
+        message
+      });
+    } catch (error) {
+      console.error('Error broadcasting file upload:', error);
     }
   });
 

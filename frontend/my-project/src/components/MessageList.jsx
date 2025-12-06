@@ -66,6 +66,61 @@ const MessageList = () => {
     });
   };
 
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const renderMessageContent = (msg) => {
+    const apiUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
+    
+    if (msg.messageType === 'image') {
+      return (
+        <div className="message-image-container">
+          <img 
+            src={`${apiUrl}${msg.fileUrl}`} 
+            alt={msg.fileName}
+            className="message-image"
+            loading="lazy"
+          />
+          <span className="message-time">{formatTime(msg.timestamp)}</span>
+        </div>
+      );
+    } else if (msg.messageType === 'file') {
+      return (
+        <div className="message-file-container">
+          <div className="file-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M13 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V9L13 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M13 2V9H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <div className="file-details">
+            <a 
+              href={`${apiUrl}${msg.fileUrl}`} 
+              download={msg.fileName}
+              className="file-name"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {msg.fileName}
+            </a>
+            <span className="file-size">{formatFileSize(msg.fileSize)}</span>
+          </div>
+          <span className="message-time">{formatTime(msg.timestamp)}</span>
+        </div>
+      );
+    } else {
+      return (
+        <>
+          <span className="message-text">{msg.content}</span>
+          <span className="message-time">{formatTime(msg.timestamp)}</span>
+        </>
+      );
+    }
+  };
+
   return (
     <div className="message-list">
       {roomMessages.length === 0 ? (
@@ -85,8 +140,7 @@ const MessageList = () => {
                 <div className="message-sender">{msg.sender.username}</div>
               )}
               <div className="message-content">
-                <span className="message-text">{msg.content}</span>
-                <span className="message-time">{formatTime(msg.timestamp)}</span>
+                {renderMessageContent(msg)}
               </div>
             </div>
           );
