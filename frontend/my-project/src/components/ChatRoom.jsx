@@ -5,10 +5,14 @@ import MessageInput from './MessageInput';
 import { useState } from 'react';
 
 const ChatRoom = () => {
-  const { currentRoom, onlineUsers, deleteRoom } = useChat();
+  const { currentRoom, onlineUsers, deleteRoom, addParticipantsToRoom, users } = useChat();
   const { user } = useAuth();
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showAddUsersModal, setShowAddUsersModal] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isAddingUsers, setIsAddingUsers] = useState(false);
 
   const getRoomName = () => {
     if (!currentRoom) return '';
@@ -53,6 +57,64 @@ const ChatRoom = () => {
     }
   };
 
+  const handleAddUsers = () => {
+    setShowOptionsMenu(false);
+    setShowAddUsersModal(true);
+    setSelectedUsers([]);
+    setSearchQuery('');
+  };
+
+  const toggleUserSelection = (selectedUser) => {
+    setSelectedUsers(prev => {
+      const userIdToCheck = selectedUser._id || selectedUser.id;
+      const isSelected = prev.some(u => (u._id || u.id) === userIdToCheck);
+      
+      if (isSelected) {
+        return prev.filter(u => (u._id || u.id) !== userIdToCheck);
+      } else {
+        return [...prev, selectedUser];
+      }
+    });
+  };
+
+  const handleConfirmAddUsers = async () => {
+    if (selectedUsers.length === 0) return;
+    
+    setIsAddingUsers(true);
+    try {
+      const userIds = selectedUsers.map(u => u._id || u.id);
+      await addParticipantsToRoom(currentRoom._id, userIds);
+      setShowAddUsersModal(false);
+      setSelectedUsers([]);
+      setSearchQuery('');
+    } catch (error) {
+      alert('Failed to add users. Please try again.');
+    } finally {
+      setIsAddingUsers(false);
+    }
+  };
+
+  const getAvailableUsers = () => {
+    if (!currentRoom) return [];
+    
+    const currentParticipantIds = currentRoom.participants.map(p => p._id || p.id);
+    
+    return users.filter(u => {
+      const userId = u._id || u.id;
+      // Exclude current participants and the current user
+      if (currentParticipantIds.includes(userId) || userId === user.id) {
+        return false;
+      }
+      // Apply search filter
+      if (searchQuery) {
+        return u.username.toLowerCase().includes(searchQuery.toLowerCase());
+      }
+      return true;
+    });
+  };
+
+  const availableUsers = getAvailableUsers();
+
   return (
     <div className="chat-room">
       {currentRoom && (
@@ -93,6 +155,17 @@ const ChatRoom = () => {
               </button>
               {showOptionsMenu && (
                 <div className="options-menu">
+                  {!currentRoom.isPrivate && (
+                    <button 
+                      className="menu-item"
+                      onClick={handleAddUsers}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15H5C3.93913 15 2.92172 15.4214 1.58579 16.1716C0.857143 16.9217 0 17.9391 0 19V21M23 11H17M20 8V14M12.5 7C12.5 9.20914 10.7091 11 8.5 11C6.29086 11 4.5 9.20914 4.5 7C4.5 4.79086 6.29086 3 8.5 3C10.7091 3 12.5 4.79086 12.5 7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      Add Users
+                    </button>
+                  )}
                   <button 
                     className="menu-item danger"
                     onClick={handleDeleteRoom}
@@ -112,6 +185,92 @@ const ChatRoom = () => {
       
       <MessageList />
       <MessageInput />
+
+      {/* Add Users Modal */}
+      {showAddUsersModal && (
+        <div className="modal-overlay" onClick={() => setShowAddUsersModal(false)}>
+          <div className="add-users-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Add Users to Room</h3>
+              <button className="close-button" onClick={() => setShowAddUsersModal(false)}>×</button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="search-container">
+                <input
+                  type="text"
+                  className="search-input"
+                  placeholder="Search users..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+
+              <div className="selected-users-count">
+                {selectedUsers.length} selected • {availableUsers.length} available
+              </div>
+
+              <div className="users-selection-list">
+                {availableUsers.length === 0 ? (
+                  <p className="empty-message">
+                    {searchQuery ? 'No users found matching your search' : 'No users available to add'}
+                  </p>
+                ) : (
+                  availableUsers.map((availableUser) => {
+                    const isSelected = selectedUsers.some(u => (u._id || u.id) === (availableUser._id || availableUser.id));
+                    return (
+                      <div
+                        key={availableUser._id || availableUser.id}
+                        className={`selectable-user ${isSelected ? 'selected' : ''}`}
+                        onClick={() => toggleUserSelection(availableUser)}
+                      >
+                        <div className="user-avatar">
+                          {availableUser.profilePicture ? (
+                            <img src={`http://localhost:3000${availableUser.profilePicture}`} alt={availableUser.username} />
+                          ) : (
+                            getInitials(availableUser.username)
+                          )}
+                          <div className={`status-indicator ${availableUser.isOnline ? 'online' : 'offline'}`}></div>
+                        </div>
+                        <div className="user-info">
+                          <div className="user-name">{availableUser.username}</div>
+                          <div className="user-status-text">
+                            {availableUser.isOnline ? 'Online' : 'Offline'}
+                          </div>
+                        </div>
+                        <div className="selection-indicator">
+                          {isSelected && (
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M20 6L9 17L4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button 
+                className="btn-cancel"
+                onClick={() => setShowAddUsersModal(false)}
+                disabled={isAddingUsers}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn-confirm"
+                onClick={handleConfirmAddUsers}
+                disabled={selectedUsers.length === 0 || isAddingUsers}
+              >
+                {isAddingUsers ? 'Adding...' : `Add ${selectedUsers.length} User${selectedUsers.length !== 1 ? 's' : ''}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

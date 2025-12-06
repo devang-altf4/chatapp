@@ -157,6 +157,48 @@ router.get('/:roomId', authMiddleware, async (req, res) => {
   }
 });
 
+// Add participants to a room
+router.put('/:roomId/participants', authMiddleware, async (req, res) => {
+  try {
+    const { userIds } = req.body;
+
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({ message: 'User IDs are required' });
+    }
+
+    const room = await Room.findById(req.params.roomId);
+
+    if (!room) {
+      return res.status(404).json({ message: 'Room not found' });
+    }
+
+    // Check if user is a participant
+    if (!room.participants.some(p => p.toString() === req.user._id.toString())) {
+      return res.status(403).json({ message: 'Not authorized to add participants' });
+    }
+
+    // Don't allow adding users to private chats
+    if (room.isPrivate) {
+      return res.status(400).json({ message: 'Cannot add users to private chats' });
+    }
+
+    // Add new participants (avoid duplicates)
+    userIds.forEach(userId => {
+      if (!room.participants.some(p => p.toString() === userId)) {
+        room.participants.push(userId);
+      }
+    });
+
+    await room.save();
+    await room.populate('participants', 'username email isOnline profilePicture');
+
+    res.json({ room });
+  } catch (error) {
+    console.error('Add participants error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Delete a room
 router.delete('/:roomId', authMiddleware, async (req, res) => {
   try {

@@ -306,6 +306,27 @@ export const ChatProvider = ({ children }) => {
     }
   };
 
+  const addParticipantsToRoom = async (roomId, userIds) => {
+    try {
+      const response = await api.put(`/rooms/${roomId}/participants`, { userIds });
+      
+      // Update the room in state with new participants
+      setRooms(prev => prev.map(r => 
+        r._id === roomId ? response.data.room : r
+      ));
+      
+      // Update current room if it's the one being modified
+      if (currentRoom?._id === roomId) {
+        setCurrentRoom(response.data.room);
+      }
+      
+      return response.data.room;
+    } catch (error) {
+      console.error('Error adding participants:', error);
+      throw error;
+    }
+  };
+
   const value = {
     rooms,
     currentRoom,
@@ -322,6 +343,7 @@ export const ChatProvider = ({ children }) => {
     createRoom,
     createPrivateRoom,
     deleteRoom,
+    addParticipantsToRoom,
     loadRooms,
     loadUsers,
   };
