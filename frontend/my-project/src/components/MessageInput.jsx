@@ -160,14 +160,6 @@ const MessageInput = () => {
       </button>
       {showEmojiPicker && (
         <div className="emoji-picker" ref={emojiPickerRef}>
-          <div className="emoji-search">
-            <input 
-              type="text" 
-              placeholder="Search emoji" 
-              className="emoji-search-input"
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
           <div className="emoji-categories">
             {Object.entries(emojis).map(([category, emojiList]) => (
               <div key={category} className="emoji-category">
