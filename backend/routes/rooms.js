@@ -56,14 +56,22 @@ router.get('/', authMiddleware, async (req, res) => {
 // Create a new room (group chat)
 router.post('/', authMiddleware, upload.single('groupPicture'), async (req, res) => {
   try {
-    const { name, participants } = req.body;
+    const { name } = req.body;
+    let { participants } = req.body;
 
     if (!name) {
       return res.status(400).json({ message: 'Room name is required' });
     }
 
+    // Handle participants array from FormData - can be string or array
+    if (typeof participants === 'string') {
+      participants = [participants];
+    } else if (!participants) {
+      participants = [];
+    }
+
     // Add creator to participants if not already included
-    const participantIds = [...new Set([req.user._id.toString(), ...(participants || [])])];
+    const participantIds = [...new Set([req.user._id.toString(), ...participants])];
 
     const room = new Room({
       name,
