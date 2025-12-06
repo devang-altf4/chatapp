@@ -101,7 +101,11 @@ const Sidebar = () => {
         </div>
         <div className="user-profile">
           <div className="user-avatar">
-            {getInitials(user?.username)}
+            {user?.profilePicture ? (
+              <img src={`http://localhost:3000${user.profilePicture}`} alt={user.username} />
+            ) : (
+              getInitials(user?.username)
+            )}
           </div>
           <div className="user-details">
             <span className="username">{user?.username}</span>
@@ -204,7 +208,11 @@ const Sidebar = () => {
                               onClick={() => toggleUserSelection(otherUser)}
                             >
                               <div className="user-avatar-small">
-                                {getInitials(otherUser.username)}
+                                {otherUser.profilePicture ? (
+                                  <img src={`http://localhost:3000${otherUser.profilePicture}`} alt={otherUser.username} />
+                                ) : (
+                                  getInitials(otherUser.username)
+                                )}
                               </div>
                               <div className="user-info-small">
                                 <div className="user-name-small">{otherUser.username}</div>
@@ -263,7 +271,16 @@ const Sidebar = () => {
                   onClick={() => joinRoom(room)}
                 >
                   <div className="room-avatar">
-                    {room.isPrivate ? getInitials(getRoomName(room)) : '👥'}
+                    {room.isPrivate ? (
+                      (() => {
+                        const otherUser = room.participants.find(p => (p._id || p.id) !== user.id);
+                        return otherUser?.profilePicture ? (
+                          <img src={`http://localhost:3000${otherUser.profilePicture}`} alt={otherUser.username} />
+                        ) : (
+                          getInitials(getRoomName(room))
+                        );
+                      })()
+                    ) : '👥'}
                   </div>
                   <div className="room-info">
                     <div className="room-name">{getRoomName(room)}</div>
@@ -298,7 +315,11 @@ const Sidebar = () => {
                   onClick={() => handleStartPrivateChat(otherUser)}
                 >
                   <div className="user-avatar">
-                    {getInitials(otherUser.username)}
+                    {otherUser.profilePicture ? (
+                      <img src={`http://localhost:3000${otherUser.profilePicture}`} alt={otherUser.username} />
+                    ) : (
+                      getInitials(otherUser.username)
+                    )}
                     <div className={`status-indicator ${otherUser.isOnline ? 'online' : 'offline'}`}></div>
                   </div>
                   <div className="user-info">

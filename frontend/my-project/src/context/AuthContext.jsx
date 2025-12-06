@@ -67,9 +67,21 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (username, email, password) => {
+  const register = async (username, email, password, profilePicture) => {
     try {
-      const response = await api.post('/auth/register', { username, email, password });
+      const formData = new FormData();
+      formData.append('username', username);
+      formData.append('email', email);
+      formData.append('password', password);
+      if (profilePicture) {
+        formData.append('profilePicture', profilePicture);
+      }
+
+      const response = await api.post('/auth/register', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
       const { token, user } = response.data;
 
       localStorage.setItem('token', token);

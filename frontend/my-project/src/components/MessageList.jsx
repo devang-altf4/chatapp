@@ -58,6 +58,10 @@ const MessageList = () => {
   const roomMessages = messages[currentRoom._id] || [];
   const roomTypingUsers = typingUsers[currentRoom._id] || [];
 
+  const getInitials = (name) => {
+    return name?.charAt(0).toUpperCase() || '?';
+  };
+
   const formatTime = (timestamp) => {
     const date = new Date(timestamp);
     return date.toLocaleTimeString('en-US', { 
@@ -137,10 +141,21 @@ const MessageList = () => {
               className={`message ${isOwnMessage ? 'own-message' : 'other-message'}`}
             >
               {!isOwnMessage && (
-                <div className="message-sender">{msg.sender.username}</div>
+                <div className="message-avatar">
+                  {msg.sender.profilePicture ? (
+                    <img src={`http://localhost:3000${msg.sender.profilePicture}`} alt={msg.sender.username} />
+                  ) : (
+                    <div className="message-avatar-initials">{getInitials(msg.sender.username)}</div>
+                  )}
+                </div>
               )}
-              <div className="message-content">
-                {renderMessageContent(msg)}
+              <div className="message-bubble">
+                {!isOwnMessage && (
+                  <div className="message-sender">{msg.sender.username}</div>
+                )}
+                <div className="message-content">
+                  {renderMessageContent(msg)}
+                </div>
               </div>
             </div>
           );

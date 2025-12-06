@@ -1,11 +1,42 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const path = require('path');
 const User = require('../models/User');
 const authMiddleware = require('../middleware/auth');
 
+// Configure multer for profile picture uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/profiles/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'profile-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit for profile pictures
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed for profile pictures'));
+    }
+  }
+});
+
 // Register
-router.post('/register', async (req, res) => {
+router.post('/register', upload.single('profilePicture'), async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
@@ -28,7 +59,8 @@ router.post('/register', async (req, res) => {
     const user = new User({
       username,
       email,
-      password
+      password,
+      profilePicture: req.file ? `/uploads/profiles/${req.file.filename}` : ''
     });
 
     await user.save();
@@ -46,7 +78,8 @@ router.post('/register', async (req, res) => {
       user: {
         id: user._id,
         username: user.username,
-        email: user.email
+        email: user.email,
+        profilePicture: user.profilePicture
       }
     });
   } catch (error) {
@@ -95,7 +128,8 @@ router.post('/login', async (req, res) => {
         id: user._id,
         username: user.username,
         email: user.email,
-        isOnline: user.isOnline
+        isOnline: user.isOnline,
+        profilePicture: user.profilePicture
       }
     });
   } catch (error) {
@@ -112,7 +146,8 @@ router.get('/me', authMiddleware, async (req, res) => {
         id: req.user._id,
         username: req.user.username,
         email: req.user.email,
-        isOnline: req.user.isOnline
+        isOnline: req.user.isOnline,
+        profilePicture: req.user.profilePicture
       }
     });
   } catch (error) {

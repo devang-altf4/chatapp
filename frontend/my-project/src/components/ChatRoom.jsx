@@ -59,7 +59,14 @@ const ChatRoom = () => {
         <div className="chat-header">
           <div className="chat-header-left">
             <div className="chat-room-avatar">
-              {currentRoom.isPrivate ? getInitials(getRoomName()) : '👥'}
+              {currentRoom.isPrivate ? (() => {
+                const otherUser = currentRoom.participants.find(p => (p._id || p.id) !== user.id);
+                return otherUser?.profilePicture ? (
+                  <img src={`http://localhost:3000${otherUser.profilePicture}`} alt={otherUser.username} />
+                ) : (
+                  getInitials(getRoomName())
+                );
+              })() : '👥'}
             </div>
             <div className="chat-header-info">
               <h2>{getRoomName()}</h2>
