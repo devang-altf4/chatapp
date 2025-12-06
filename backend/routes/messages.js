@@ -54,7 +54,7 @@ router.get('/:roomId', authMiddleware, async (req, res) => {
     }
 
     const messages = await Message.find({ room: roomId })
-      .populate('sender', 'username email')
+      .populate('sender', 'username email profilePicture')
       .sort({ timestamp: -1 })
       .limit(limit)
       .skip(skip);
@@ -92,7 +92,7 @@ router.post('/', authMiddleware, async (req, res) => {
     });
 
     await message.save();
-    await message.populate('sender', 'username email');
+    await message.populate('sender', 'username email profilePicture');
 
     // Update room's last activity
     room.lastActivity = new Date();
@@ -143,7 +143,7 @@ router.post('/upload', authMiddleware, upload.single('file'), async (req, res) =
     });
 
     await message.save();
-    await message.populate('sender', 'username email');
+    await message.populate('sender', 'username email profilePicture');
 
     // Update room's last activity
     room.lastActivity = new Date();

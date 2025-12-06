@@ -10,7 +10,7 @@ router.get('/', authMiddleware, async (req, res) => {
     const rooms = await Room.find({
       participants: req.user._id
     })
-    .populate('participants', 'username email isOnline')
+    .populate('participants', 'username email isOnline profilePicture')
     .populate('createdBy', 'username')
     .sort({ lastActivity: -1 });
 
@@ -41,7 +41,7 @@ router.post('/', authMiddleware, async (req, res) => {
     });
 
     await room.save();
-    await room.populate('participants', 'username email isOnline');
+    await room.populate('participants', 'username email isOnline profilePicture');
 
     res.status(201).json({ room });
   } catch (error) {
@@ -63,7 +63,7 @@ router.post('/private', authMiddleware, async (req, res) => {
     let room = await Room.findOne({
       isPrivate: true,
       participants: { $all: [req.user._id, userId], $size: 2 }
-    }).populate('participants', 'username email isOnline');
+    }).populate('participants', 'username email isOnline profilePicture');
 
     if (!room) {
       // Create new private room
@@ -77,7 +77,7 @@ router.post('/private', authMiddleware, async (req, res) => {
       });
 
       await room.save();
-      await room.populate('participants', 'username email isOnline');
+      await room.populate('participants', 'username email isOnline profilePicture');
     }
 
     res.json({ room });
@@ -103,7 +103,7 @@ router.post('/:roomId/join', authMiddleware, async (req, res) => {
 
     room.participants.push(req.user._id);
     await room.save();
-    await room.populate('participants', 'username email isOnline');
+    await room.populate('participants', 'username email isOnline profilePicture');
 
     res.json({ room });
   } catch (error) {
@@ -138,7 +138,7 @@ router.post('/:roomId/leave', authMiddleware, async (req, res) => {
 router.get('/:roomId', authMiddleware, async (req, res) => {
   try {
     const room = await Room.findById(req.params.roomId)
-      .populate('participants', 'username email isOnline')
+      .populate('participants', 'username email isOnline profilePicture')
       .populate('createdBy', 'username');
 
     if (!room) {

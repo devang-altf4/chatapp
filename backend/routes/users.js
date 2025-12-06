@@ -38,7 +38,7 @@ const upload = multer({
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const users = await User.find({ _id: { $ne: req.user._id } })
-      .select('username email isOnline lastSeen')
+      .select('username email isOnline lastSeen profilePicture')
       .sort({ username: 1 });
 
     res.json({ users });
@@ -61,7 +61,7 @@ router.get('/search', authMiddleware, async (req, res) => {
       _id: { $ne: req.user._id },
       username: { $regex: query, $options: 'i' }
     })
-    .select('username email isOnline lastSeen')
+    .select('username email isOnline lastSeen profilePicture')
     .limit(20);
 
     res.json({ users });

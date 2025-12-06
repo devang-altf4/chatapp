@@ -197,7 +197,7 @@ io.on('connection', async (socket) => {
       });
 
       await message.save();
-      await message.populate('sender', 'username email isOnline');
+      await message.populate('sender', 'username email isOnline profilePicture');
 
       // Update room's last activity
       room.lastActivity = new Date();
