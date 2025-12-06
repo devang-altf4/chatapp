@@ -13,6 +13,25 @@ const Sidebar = () => {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [showSettings, setShowSettings] = useState(false);
+  const [groupPicture, setGroupPicture] = useState(null);
+  const [groupPicturePreview, setGroupPicturePreview] = useState('');
+
+  const handleGroupPictureChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setGroupPicture(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setGroupPicturePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeGroupPicture = () => {
+    setGroupPicture(null);
+    setGroupPicturePreview('');
+  };
 
   const handleCreateRoom = async (e) => {
     e.preventDefault();
@@ -26,12 +45,14 @@ const Sidebar = () => {
     try {
       const participantIds = selectedUsers.map(u => u._id || u.id);
       console.log('Creating room with participants:', participantIds);
-      await createRoom(newRoomName, participantIds);
+      await createRoom(newRoomName, participantIds, groupPicture);
       setNewRoomName('');
       setShowNewRoom(false);
       setCreatingRoomStep(1);
       setSelectedUsers([]);
       setUserSearchQuery('');
+      setGroupPicture(null);
+      setGroupPicturePreview('');
     } catch (error) {
       console.error('Error creating room:', error);
       alert('Failed to create room. Please try again.');
@@ -55,6 +76,8 @@ const Sidebar = () => {
     setCreatingRoomStep(1);
     setSelectedUsers([]);
     setUserSearchQuery('');
+    setGroupPicture(null);
+    setGroupPicturePreview('');
   };
 
   const filteredUsers = users.filter(u => {
@@ -169,6 +192,32 @@ const Sidebar = () => {
                       placeholder="Room name..."
                       autoFocus
                     />
+                    <div className="group-picture-upload">
+                      <label className="upload-label">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleGroupPictureChange}
+                          style={{ display: 'none' }}
+                        />
+                        <div className="upload-button">
+                          {groupPicturePreview ? (
+                            <img src={groupPicturePreview} alt="Group" className="group-pic-preview" />
+                          ) : (
+                            <span>📷 Add Group Picture</span>
+                          )}
+                        </div>
+                      </label>
+                      {groupPicturePreview && (
+                        <button 
+                          type="button" 
+                          className="btn-remove-pic"
+                          onClick={removeGroupPicture}
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
                     <button type="submit" className="btn-create">Next</button>
                     <button 
                       type="button" 
@@ -282,7 +331,11 @@ const Sidebar = () => {
                           getInitials(getRoomName(room))
                         );
                       })()
-                    ) : '👥'}
+                    ) : room.groupPicture ? (
+                      <img src={`http://localhost:3000${room.groupPicture}`} alt={room.name} />
+                    ) : (
+                      '👥'
+                    )}
                   </div>
                   <div className="room-info">
                     <div className="room-name">{getRoomName(room)}</div>

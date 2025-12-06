@@ -5,7 +5,7 @@ import MessageInput from './MessageInput';
 import { useState } from 'react';
 
 const ChatRoom = () => {
-  const { currentRoom, onlineUsers, deleteRoom, addParticipantsToRoom, users } = useChat();
+  const { currentRoom, onlineUsers, deleteRoom, addParticipantsToRoom, users, updateRoomDetails, promoteToAdmin, demoteAdmin, kickParticipant } = useChat();
   const { user } = useAuth();
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -13,6 +13,21 @@ const ChatRoom = () => {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddingUsers, setIsAddingUsers] = useState(false);
+  const [showManageModal, setShowManageModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editRoomName, setEditRoomName] = useState('');
+  const [editGroupPicture, setEditGroupPicture] = useState(null);
+  const [editGroupPicturePreview, setEditGroupPicturePreview] = useState('');
+
+  const isUserAdmin = () => {
+    if (!currentRoom || !user) return false;
+    return currentRoom.admins?.some(admin => (admin._id || admin.id || admin) === user.id);
+  };
+
+  const isUserCreator = () => {
+    if (!currentRoom || !user) return false;
+    return (currentRoom.createdBy._id || currentRoom.createdBy.id || currentRoom.createdBy) === user.id;
+  };
 
   const getRoomName = () => {
     if (!currentRoom) return '';
@@ -113,13 +128,89 @@ const ChatRoom = () => {
     });
   };
 
+  const handleManageParticipants = () => {
+    setShowOptionsMenu(false);
+    setShowManageModal(true);
+  };
+
+  const handleEditRoom = () => {
+    setShowOptionsMenu(false);
+    setEditRoomName(currentRoom.name);
+    setEditGroupPicturePreview(currentRoom.groupPicture ? `http://localhost:3000${currentRoom.groupPicture}` : '');
+    setShowEditModal(true);
+  };
+
+  const handleEditGroupPictureChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setEditGroupPicture(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditGroupPicturePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveRoomDetails = async () => {
+    try {
+      const formData = new FormData();
+      if (editRoomName !== currentRoom.name) {
+        formData.append('name', editRoomName);
+      }
+      if (editGroupPicture) {
+        formData.append('groupPicture', editGroupPicture);
+      }
+      
+      await updateRoomDetails(currentRoom._id, formData);
+      setShowEditModal(false);
+      setEditGroupPicture(null);
+    } catch (error) {
+      alert('Failed to update room details. Please try again.');
+    }
+  };
+
+  const handlePromoteUser = async (userId) => {
+    try {
+      await promoteToAdmin(currentRoom._id, userId);
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to promote user.');
+    }
+  };
+
+  const handleDemoteUser = async (userId) => {
+    try {
+      await demoteAdmin(currentRoom._id, userId);
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to demote user.');
+    }
+  };
+
+  const handleKickUser = async (userId) => {
+    const participant = currentRoom.participants.find(p => (p._id || p.id) === userId);
+    if (!participant) return;
+    
+    const confirmKick = window.confirm(`Remove ${participant.username} from this group?`);
+    if (!confirmKick) return;
+    
+    try {
+      await kickParticipant(currentRoom._id, userId);
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to remove user.');
+    }
+  };
+
   const availableUsers = getAvailableUsers();
 
   return (
     <div className="chat-room">
       {currentRoom && (
         <div className="chat-header">
-          <div className="chat-header-left">
+          <div 
+            className="chat-header-left clickable" 
+            onClick={() => !currentRoom.isPrivate && setShowManageModal(true)}
+            style={{ cursor: !currentRoom.isPrivate ? 'pointer' : 'default' }}
+          >
             <div className="chat-room-avatar">
               {currentRoom.isPrivate ? (() => {
                 const otherUser = currentRoom.participants.find(p => (p._id || p.id) !== user.id);
@@ -128,7 +219,11 @@ const ChatRoom = () => {
                 ) : (
                   getInitials(getRoomName())
                 );
-              })() : '👥'}
+              })() : currentRoom.groupPicture ? (
+                <img src={`http://localhost:3000${currentRoom.groupPicture}`} alt={currentRoom.name} />
+              ) : (
+                '👥'
+              )}
             </div>
             <div className="chat-header-info">
               <h2>{getRoomName()}</h2>
@@ -156,15 +251,28 @@ const ChatRoom = () => {
               {showOptionsMenu && (
                 <div className="options-menu">
                   {!currentRoom.isPrivate && (
-                    <button 
-                      className="menu-item"
-                      onClick={handleAddUsers}
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15H5C3.93913 15 2.92172 15.4214 1.58579 16.1716C0.857143 16.9217 0 17.9391 0 19V21M23 11H17M20 8V14M12.5 7C12.5 9.20914 10.7091 11 8.5 11C6.29086 11 4.5 9.20914 4.5 7C4.5 4.79086 6.29086 3 8.5 3C10.7091 3 12.5 4.79086 12.5 7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                      Add Users
-                    </button>
+                    <>
+                      <button 
+                        className="menu-item"
+                        onClick={handleAddUsers}
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15H5C3.93913 15 2.92172 15.4214 1.58579 16.1716C0.857143 16.9217 0 17.9391 0 19V21M23 11H17M20 8V14M12.5 7C12.5 9.20914 10.7091 11 8.5 11C6.29086 11 4.5 9.20914 4.5 7C4.5 4.79086 6.29086 3 8.5 3C10.7091 3 12.5 4.79086 12.5 7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        Add Users
+                      </button>
+                      {isUserAdmin() && (
+                        <button 
+                          className="menu-item"
+                          onClick={handleEditRoom}
+                        >
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                          Edit Room
+                        </button>
+                      )}
+                    </>
                   )}
                   <button 
                     className="menu-item danger"
@@ -266,6 +374,192 @@ const ChatRoom = () => {
                 disabled={selectedUsers.length === 0 || isAddingUsers}
               >
                 {isAddingUsers ? 'Adding...' : `Add ${selectedUsers.length} User${selectedUsers.length !== 1 ? 's' : ''}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manage Participants Modal */}
+      {showManageModal && currentRoom && (
+        <div className="modal-overlay" onClick={() => setShowManageModal(false)}>
+          <div className="manage-participants-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="header-with-avatar">
+                <div className="modal-room-avatar">
+                  {currentRoom.groupPicture ? (
+                    <img src={`http://localhost:3000${currentRoom.groupPicture}`} alt={currentRoom.name} />
+                  ) : (
+                    '👥'
+                  )}
+                </div>
+                <div>
+                  <h3>{currentRoom.name}</h3>
+                  <p className="participant-count">{currentRoom.participants.length} participants</p>
+                </div>
+              </div>
+              <button className="close-button" onClick={() => setShowManageModal(false)}>×</button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="participants-list">
+                {currentRoom.participants.map((participant) => {
+                  const participantId = participant._id || participant.id;
+                  const isAdmin = currentRoom.admins?.some(admin => (admin._id || admin.id || admin) === participantId);
+                  const isCreator = (currentRoom.createdBy._id || currentRoom.createdBy.id || currentRoom.createdBy) === participantId;
+                  const isCurrentUser = participantId === user.id;
+                  const canManage = isUserAdmin() && !isCurrentUser && !isCreator;
+
+                  return (
+                    <div key={participantId} className="participant-item">
+                      <div className="participant-info">
+                        <div className="participant-avatar">
+                          {participant.profilePicture ? (
+                            <img src={`http://localhost:3000${participant.profilePicture}`} alt={participant.username} />
+                          ) : (
+                            getInitials(participant.username)
+                          )}
+                          <div className={`status-indicator ${participant.isOnline ? 'online' : 'offline'}`}></div>
+                        </div>
+                        <div className="participant-details">
+                          <div className="participant-name">
+                            {participant.username}
+                            {isCurrentUser && <span className="you-badge"> (You)</span>}
+                          </div>
+                          <div className="participant-role">
+                            {isCreator ? (
+                              <span className="admin-badge creator">👑 Creator</span>
+                            ) : isAdmin ? (
+                              <span className="admin-badge">⭐ Admin</span>
+                            ) : (
+                              <span className="member-badge">Member</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {canManage && (
+                        <div className="participant-actions">
+                          {isAdmin ? (
+                            <button 
+                              className="btn-action demote"
+                              onClick={() => handleDemoteUser(participantId)}
+                              title="Remove admin"
+                            >
+                              Remove Admin
+                            </button>
+                          ) : (
+                            <button 
+                              className="btn-action promote"
+                              onClick={() => handlePromoteUser(participantId)}
+                              title="Make admin"
+                            >
+                              Make Admin
+                            </button>
+                          )}
+                          <button 
+                            className="btn-action kick"
+                            onClick={() => handleKickUser(participantId)}
+                            title="Remove from group"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button 
+                className="btn-close"
+                onClick={() => setShowManageModal(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Room Modal */}
+      {showEditModal && currentRoom && (
+        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="edit-room-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Edit Room Details</h3>
+              <button className="close-button" onClick={() => setShowEditModal(false)}>×</button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="edit-group-picture-section">
+                <label>Group Picture</label>
+                <div className="picture-upload-area">
+                  {editGroupPicturePreview ? (
+                    <div className="picture-preview">
+                      <img src={editGroupPicturePreview} alt="Group" />
+                      <button 
+                        className="remove-picture-btn"
+                        onClick={() => {
+                          setEditGroupPicture(null);
+                          setEditGroupPicturePreview('');
+                        }}
+                        type="button"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="upload-placeholder">
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15M17 8L12 3M12 3L7 8M12 3V15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      <p>Click to upload group picture</p>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleEditGroupPictureChange}
+                    className="file-input-hidden"
+                    id="edit-group-picture"
+                  />
+                  {!editGroupPicturePreview && (
+                    <label htmlFor="edit-group-picture" className="upload-label">
+                      Choose Picture
+                    </label>
+                  )}
+                </div>
+              </div>
+
+              <div className="edit-room-name-section">
+                <label htmlFor="edit-room-name">Room Name</label>
+                <input
+                  type="text"
+                  id="edit-room-name"
+                  value={editRoomName}
+                  onChange={(e) => setEditRoomName(e.target.value)}
+                  placeholder="Enter room name..."
+                  className="room-name-input"
+                />
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button 
+                className="btn-cancel"
+                onClick={() => setShowEditModal(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn-confirm"
+                onClick={handleSaveRoomDetails}
+                disabled={!editRoomName.trim()}
+              >
+                Save Changes
               </button>
             </div>
           </div>

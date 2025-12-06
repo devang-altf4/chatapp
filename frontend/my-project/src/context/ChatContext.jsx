@@ -251,9 +251,20 @@ export const ChatProvider = ({ children }) => {
     socket.emit('typing_stop', { roomId: currentRoom._id });
   };
 
-  const createRoom = async (name, participants = []) => {
+  const createRoom = async (name, participants = [], groupPicture = null) => {
     try {
-      const response = await api.post('/rooms', { name, participants });
+      const formData = new FormData();
+      formData.append('name', name);
+      participants.forEach(p => formData.append('participants', p));
+      if (groupPicture) {
+        formData.append('groupPicture', groupPicture);
+      }
+
+      const response = await api.post('/rooms', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
       setRooms(prev => [...prev, response.data.room]);
       return response.data.room;
     } catch (error) {
@@ -327,6 +338,86 @@ export const ChatProvider = ({ children }) => {
     }
   };
 
+  const updateRoomDetails = async (roomId, formData) => {
+    try {
+      const response = await api.put(`/rooms/${roomId}/details`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      setRooms(prev => prev.map(r => 
+        r._id === roomId ? response.data.room : r
+      ));
+      
+      if (currentRoom?._id === roomId) {
+        setCurrentRoom(response.data.room);
+      }
+      
+      return response.data.room;
+    } catch (error) {
+      console.error('Error updating room details:', error);
+      throw error;
+    }
+  };
+
+  const promoteToAdmin = async (roomId, userId) => {
+    try {
+      const response = await api.put(`/rooms/${roomId}/promote/${userId}`);
+      
+      setRooms(prev => prev.map(r => 
+        r._id === roomId ? response.data.room : r
+      ));
+      
+      if (currentRoom?._id === roomId) {
+        setCurrentRoom(response.data.room);
+      }
+      
+      return response.data.room;
+    } catch (error) {
+      console.error('Error promoting user:', error);
+      throw error;
+    }
+  };
+
+  const demoteAdmin = async (roomId, userId) => {
+    try {
+      const response = await api.put(`/rooms/${roomId}/demote/${userId}`);
+      
+      setRooms(prev => prev.map(r => 
+        r._id === roomId ? response.data.room : r
+      ));
+      
+      if (currentRoom?._id === roomId) {
+        setCurrentRoom(response.data.room);
+      }
+      
+      return response.data.room;
+    } catch (error) {
+      console.error('Error demoting admin:', error);
+      throw error;
+    }
+  };
+
+  const kickParticipant = async (roomId, userId) => {
+    try {
+      const response = await api.delete(`/rooms/${roomId}/kick/${userId}`);
+      
+      setRooms(prev => prev.map(r => 
+        r._id === roomId ? response.data.room : r
+      ));
+      
+      if (currentRoom?._id === roomId) {
+        setCurrentRoom(response.data.room);
+      }
+      
+      return response.data.room;
+    } catch (error) {
+      console.error('Error kicking participant:', error);
+      throw error;
+    }
+  };
+
   const value = {
     rooms,
     currentRoom,
@@ -344,6 +435,10 @@ export const ChatProvider = ({ children }) => {
     createPrivateRoom,
     deleteRoom,
     addParticipantsToRoom,
+    updateRoomDetails,
+    promoteToAdmin,
+    demoteAdmin,
+    kickParticipant,
     loadRooms,
     loadUsers,
   };
