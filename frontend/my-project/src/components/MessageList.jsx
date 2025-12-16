@@ -34,7 +34,6 @@ const MessageList = () => {
               <rect x="170" y="140" width="50" height="4" rx="2" fill="#9CA3AF"/>
             </svg>
           </div>
-          <h2>Welcome to ChatFlow</h2>
           <p>Start connecting. Select a room or start a new chat.</p>
           <div className="welcome-actions">
             <button className="btn-welcome-action">

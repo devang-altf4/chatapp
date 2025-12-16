@@ -22,7 +22,8 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024 // 5MB limit
   },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif/;
+    // Include webp since many modern browsers/devices upload it by default
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
     
@@ -32,6 +33,26 @@ const upload = multer({
       cb(new Error('Only image files are allowed'));
     }
   }
+});
+
+// Multer error handler for this router (keeps responses JSON)
+router.use((err, req, res, next) => {
+  if (!err) return next();
+
+  // Multer errors (file too large, invalid mimetype, etc.)
+  if (err instanceof multer.MulterError) {
+    const message = err.code === 'LIMIT_FILE_SIZE'
+      ? 'Profile picture must be less than 5MB'
+      : err.message;
+    return res.status(400).json({ message });
+  }
+
+  // Custom errors from fileFilter (e.g., "Only image files are allowed")
+  if (typeof err.message === 'string' && err.message) {
+    return res.status(400).json({ message: err.message });
+  }
+
+  return next(err);
 });
 
 // Get all users (for finding people to chat with)

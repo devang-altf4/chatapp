@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 const Settings = ({ isOpen, onClose }) => {
@@ -9,6 +9,16 @@ const Settings = ({ isOpen, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
+
+  // Update local state when user changes
+  useEffect(() => {
+    if (user) {
+      setUsername(user.username || '');
+      if (!profilePicture) {
+        setPreviewUrl(user.profilePicture ? `http://localhost:3000${user.profilePicture}` : '');
+      }
+    }
+  }, [user, profilePicture]);
 
   if (!isOpen) return null;
 
@@ -60,6 +70,11 @@ const Settings = ({ isOpen, onClose }) => {
     const result = await updateProfile(username.trim(), profilePicture);
 
     if (result.success) {
+      // Reset the profile picture file state
+      setProfilePicture(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       onClose();
     } else {
       setError(result.message);

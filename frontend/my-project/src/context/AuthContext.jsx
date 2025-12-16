@@ -129,11 +129,8 @@ export const AuthProvider = ({ children }) => {
         formData.append('profilePicture', profilePicture);
       }
 
-      const response = await api.put('/users/profile', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      // Don't set Content-Type header manually - let axios set it with the correct boundary
+      const response = await api.put('/users/profile', formData);
 
       const { user: updatedUser } = response.data;
 
@@ -143,6 +140,7 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true };
     } catch (error) {
+      console.error('Update profile error:', error);
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to update profile'
