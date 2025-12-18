@@ -34,6 +34,28 @@ export const ChatProvider = ({ children }) => {
     };
   }, [isAuthenticated]);
 
+  // Handle socket reconnection
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket || !isAuthenticated) return;
+
+    const handleReconnection = () => {
+      console.log('Socket reconnected, re-joining rooms...');
+      // Re-join all participant rooms
+      socket.emit('join_rooms');
+      // Re-join current room if active
+      if (currentRoom) {
+        socket.emit('join_room', currentRoom._id);
+      }
+    };
+
+    socket.on('connect', handleReconnection);
+
+    return () => {
+      socket.off('connect', handleReconnection);
+    };
+  }, [isAuthenticated, currentRoom]);
+
   const setupSocketListeners = () => {
     const socket = getSocket();
     if (!socket) return;
@@ -257,8 +279,16 @@ export const ChatProvider = ({ children }) => {
       }
 
       const response = await api.post('/rooms', formData);
-      setRooms(prev => [...prev, response.data.room]);
-      return response.data.room;
+      const newRoom = response.data.room;
+      setRooms(prev => [...prev, newRoom]);
+
+      // Join the socket channel for the new room immediately
+      const socket = getSocket();
+      if (socket) {
+        socket.emit('join_room', newRoom._id);
+      }
+
+      return newRoom;
     } catch (error) {
       console.error('Error creating room:', error);
       throw error;
@@ -275,6 +305,12 @@ export const ChatProvider = ({ children }) => {
         if (exists) return prev;
         return [...prev, room];
       });
+
+      // Join the socket channel for the new room immediately
+      const socket = getSocket();
+      if (socket) {
+        socket.emit('join_room', room._id);
+      }
 
       return room;
     } catch (error) {
