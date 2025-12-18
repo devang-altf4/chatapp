@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
@@ -26,7 +27,7 @@ const upload = multer({
     const allowedTypes = /jpeg|jpg|png|gif/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
-    
+
     if (mimetype && extname) {
       return cb(null, true);
     } else {
@@ -41,10 +42,10 @@ router.get('/', authMiddleware, async (req, res) => {
     const rooms = await Room.find({
       participants: req.user._id
     })
-    .populate('participants', 'username email isOnline profilePicture')
-    .populate('admins', 'username email profilePicture')
-    .populate('createdBy', 'username')
-    .sort({ lastActivity: -1 });
+      .populate('participants', 'username email isOnline profilePicture')
+      .populate('admins', 'username email profilePicture')
+      .populate('createdBy', 'username')
+      .sort({ lastActivity: -1 });
 
     res.json({ rooms });
   } catch (error) {
@@ -70,8 +71,9 @@ router.post('/', authMiddleware, upload.single('groupPicture'), async (req, res)
       participants = [];
     }
 
-    // Add creator to participants if not already included
-    const participantIds = [...new Set([req.user._id.toString(), ...participants])];
+    // Add creator to participants if not already included and filter invalid IDs
+    const participantIds = [...new Set([req.user._id.toString(), ...participants])]
+      .filter(id => mongoose.Types.ObjectId.isValid(id));
 
     const room = new Room({
       name,
@@ -111,7 +113,7 @@ router.post('/private', authMiddleware, async (req, res) => {
     if (!room) {
       // Create new private room
       const participantIds = [req.user._id, userId];
-      
+
       room = new Room({
         name: 'Private Chat',
         isPrivate: true,
@@ -286,7 +288,7 @@ router.put('/:roomId/details', authMiddleware, upload.single('groupPicture'), as
 
     // Check if user is an admin
     const isAdmin = room.admins.some(adminId => adminId.toString() === req.user._id.toString());
-    
+
     if (!isAdmin) {
       return res.status(403).json({ message: 'Only admins can update room details' });
     }
@@ -323,21 +325,21 @@ router.put('/:roomId/promote/:userId', authMiddleware, async (req, res) => {
 
     // Check if requester is an admin
     const isAdmin = room.admins.some(adminId => adminId.toString() === req.user._id.toString());
-    
+
     if (!isAdmin) {
       return res.status(403).json({ message: 'Only admins can promote users' });
     }
 
     // Check if user is a participant
     const isParticipant = room.participants.some(p => p.toString() === req.params.userId);
-    
+
     if (!isParticipant) {
       return res.status(400).json({ message: 'User is not a participant' });
     }
 
     // Check if user is already an admin
     const isAlreadyAdmin = room.admins.some(adminId => adminId.toString() === req.params.userId);
-    
+
     if (isAlreadyAdmin) {
       return res.status(400).json({ message: 'User is already an admin' });
     }
@@ -365,7 +367,7 @@ router.put('/:roomId/demote/:userId', authMiddleware, async (req, res) => {
 
     // Check if requester is an admin
     const isAdmin = room.admins.some(adminId => adminId.toString() === req.user._id.toString());
-    
+
     if (!isAdmin) {
       return res.status(403).json({ message: 'Only admins can demote users' });
     }
@@ -377,7 +379,7 @@ router.put('/:roomId/demote/:userId', authMiddleware, async (req, res) => {
 
     // Remove from admins
     room.admins = room.admins.filter(adminId => adminId.toString() !== req.params.userId);
-    
+
     await room.save();
     await room.populate('participants', 'username email isOnline profilePicture');
     await room.populate('admins', 'username email');
@@ -400,7 +402,7 @@ router.delete('/:roomId/kick/:userId', authMiddleware, async (req, res) => {
 
     // Check if requester is an admin
     const isAdmin = room.admins.some(adminId => adminId.toString() === req.user._id.toString());
-    
+
     if (!isAdmin) {
       return res.status(403).json({ message: 'Only admins can remove participants' });
     }

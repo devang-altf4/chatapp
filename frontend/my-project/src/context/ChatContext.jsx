@@ -43,11 +43,11 @@ export const ChatProvider = ({ children }) => {
         const roomMessages = prev[message.room] || [];
         // Check if message already exists by ID to prevent duplicates
         const messageExists = roomMessages.some(m => m._id === message._id);
-        
+
         if (messageExists) {
           return prev; // Don't add duplicate
         }
-        
+
         return {
           ...prev,
           [message.room]: [...roomMessages, message]
@@ -60,11 +60,11 @@ export const ChatProvider = ({ children }) => {
         const roomMessages = prev[message.room] || [];
         // Check if message already exists by ID to prevent duplicates
         const messageExists = roomMessages.some(m => m._id === message._id);
-        
+
         if (messageExists) {
           return prev; // Don't add duplicate
         }
-        
+
         return {
           ...prev,
           [message.room]: [...roomMessages, message]
@@ -98,8 +98,8 @@ export const ChatProvider = ({ children }) => {
         newMap.set(userId, isOnline);
         return newMap;
       });
-      
-      setUsers(prev => prev.map(u => 
+
+      setUsers(prev => prev.map(u =>
         u.id === userId ? { ...u, isOnline } : u
       ));
     });
@@ -148,7 +148,7 @@ export const ChatProvider = ({ children }) => {
         _id: u._id || u.id
       }));
       setUsers(normalizedUsers);
-      
+
       const onlineMap = new Map();
       normalizedUsers.forEach(u => {
         onlineMap.set(u.id || u._id, u.isOnline);
@@ -177,7 +177,7 @@ export const ChatProvider = ({ children }) => {
 
     setCurrentRoom(room);
     socket.emit('join_room', room._id);
-    
+
     if (!messages[room._id]) {
       loadMessages(room._id);
     }
@@ -209,11 +209,7 @@ export const ChatProvider = ({ children }) => {
       formData.append('file', file);
       formData.append('roomId', currentRoom._id);
 
-      const response = await api.post('/messages/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      const response = await api.post('/messages/upload', formData);
 
       // Add the message to state
       setMessages(prev => ({
@@ -260,11 +256,7 @@ export const ChatProvider = ({ children }) => {
         formData.append('groupPicture', groupPicture);
       }
 
-      const response = await api.post('/rooms', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      const response = await api.post('/rooms', formData);
       setRooms(prev => [...prev, response.data.room]);
       return response.data.room;
     } catch (error) {
@@ -277,13 +269,13 @@ export const ChatProvider = ({ children }) => {
     try {
       const response = await api.post('/rooms/private', { userId });
       const room = response.data.room;
-      
+
       setRooms(prev => {
         const exists = prev.find(r => r._id === room._id);
         if (exists) return prev;
         return [...prev, room];
       });
-      
+
       return room;
     } catch (error) {
       console.error('Error creating private room:', error);
@@ -294,22 +286,22 @@ export const ChatProvider = ({ children }) => {
   const deleteRoom = async (roomId) => {
     try {
       await api.delete(`/rooms/${roomId}`);
-      
+
       // Remove room from state
       setRooms(prev => prev.filter(r => r._id !== roomId));
-      
+
       // Clear current room if it's the one being deleted
       if (currentRoom?._id === roomId) {
         setCurrentRoom(null);
       }
-      
+
       // Clear messages for this room
       setMessages(prev => {
         const newMessages = { ...prev };
         delete newMessages[roomId];
         return newMessages;
       });
-      
+
       return true;
     } catch (error) {
       console.error('Error deleting room:', error);
@@ -320,17 +312,17 @@ export const ChatProvider = ({ children }) => {
   const addParticipantsToRoom = async (roomId, userIds) => {
     try {
       const response = await api.put(`/rooms/${roomId}/participants`, { userIds });
-      
+
       // Update the room in state with new participants
-      setRooms(prev => prev.map(r => 
+      setRooms(prev => prev.map(r =>
         r._id === roomId ? response.data.room : r
       ));
-      
+
       // Update current room if it's the one being modified
       if (currentRoom?._id === roomId) {
         setCurrentRoom(response.data.room);
       }
-      
+
       return response.data.room;
     } catch (error) {
       console.error('Error adding participants:', error);
@@ -340,20 +332,16 @@ export const ChatProvider = ({ children }) => {
 
   const updateRoomDetails = async (roomId, formData) => {
     try {
-      const response = await api.put(`/rooms/${roomId}/details`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-      
-      setRooms(prev => prev.map(r => 
+      const response = await api.put(`/rooms/${roomId}/details`, formData);
+
+      setRooms(prev => prev.map(r =>
         r._id === roomId ? response.data.room : r
       ));
-      
+
       if (currentRoom?._id === roomId) {
         setCurrentRoom(response.data.room);
       }
-      
+
       return response.data.room;
     } catch (error) {
       console.error('Error updating room details:', error);
@@ -364,15 +352,15 @@ export const ChatProvider = ({ children }) => {
   const promoteToAdmin = async (roomId, userId) => {
     try {
       const response = await api.put(`/rooms/${roomId}/promote/${userId}`);
-      
-      setRooms(prev => prev.map(r => 
+
+      setRooms(prev => prev.map(r =>
         r._id === roomId ? response.data.room : r
       ));
-      
+
       if (currentRoom?._id === roomId) {
         setCurrentRoom(response.data.room);
       }
-      
+
       return response.data.room;
     } catch (error) {
       console.error('Error promoting user:', error);
@@ -383,15 +371,15 @@ export const ChatProvider = ({ children }) => {
   const demoteAdmin = async (roomId, userId) => {
     try {
       const response = await api.put(`/rooms/${roomId}/demote/${userId}`);
-      
-      setRooms(prev => prev.map(r => 
+
+      setRooms(prev => prev.map(r =>
         r._id === roomId ? response.data.room : r
       ));
-      
+
       if (currentRoom?._id === roomId) {
         setCurrentRoom(response.data.room);
       }
-      
+
       return response.data.room;
     } catch (error) {
       console.error('Error demoting admin:', error);
@@ -402,15 +390,15 @@ export const ChatProvider = ({ children }) => {
   const kickParticipant = async (roomId, userId) => {
     try {
       const response = await api.delete(`/rooms/${roomId}/kick/${userId}`);
-      
-      setRooms(prev => prev.map(r => 
+
+      setRooms(prev => prev.map(r =>
         r._id === roomId ? response.data.room : r
       ));
-      
+
       if (currentRoom?._id === roomId) {
         setCurrentRoom(response.data.room);
       }
-      
+
       return response.data.room;
     } catch (error) {
       console.error('Error kicking participant:', error);
