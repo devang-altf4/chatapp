@@ -21,9 +21,8 @@ const server = http.createServer(app);
 // CORS configuration
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:5173',
-    methods: ['GET', 'POST'],
-    credentials: true
+    origin: "*",
+    methods: ['GET', 'POST']
   }
 });
 
@@ -32,8 +31,7 @@ connectDB();
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:5173',
-  credentials: true
+  origin: "*"
 }));
 app.use(express.json());
 
@@ -60,14 +58,14 @@ const typingUsers = new Map(); // roomId -> Set of userIds
 io.use(async (socket, next) => {
   try {
     const token = socket.handshake.auth.token;
-    
+
     if (!token) {
       return next(new Error('Authentication error'));
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.userId);
-    
+
     if (!user) {
       return next(new Error('User not found'));
     }
@@ -86,7 +84,7 @@ io.on('connection', async (socket) => {
 
   // Track user connection
   onlineUsers.set(socket.id, socket.userId);
-  
+
   if (!userSockets.has(socket.userId)) {
     userSockets.set(socket.userId, new Set());
   }
@@ -94,7 +92,7 @@ io.on('connection', async (socket) => {
 
   // Update user online status
   try {
-    await User.findByIdAndUpdate(socket.userId, { 
+    await User.findByIdAndUpdate(socket.userId, {
       isOnline: true,
       lastSeen: new Date()
     });
@@ -126,7 +124,7 @@ io.on('connection', async (socket) => {
   socket.on('join_room', async (roomId) => {
     try {
       const room = await Room.findById(roomId);
-      
+
       if (!room) {
         socket.emit('error', { message: 'Room not found' });
         return;
@@ -142,7 +140,7 @@ io.on('connection', async (socket) => {
 
       // Send room joined confirmation
       socket.emit('room_joined', { roomId });
-      
+
       // Notify others in the room
       socket.to(roomId).emit('user_joined_room', {
         roomId,
@@ -159,7 +157,7 @@ io.on('connection', async (socket) => {
   socket.on('leave_room', (roomId) => {
     socket.leave(roomId);
     console.log(`${socket.username} left room ${roomId}`);
-    
+
     socket.to(roomId).emit('user_left_room', {
       roomId,
       userId: socket.userId,
@@ -234,7 +232,7 @@ io.on('connection', async (socket) => {
   socket.on('file_uploaded', async (data) => {
     try {
       const { message, roomId } = data;
-      
+
       // Broadcast to other users in the room
       socket.to(roomId).emit('file_uploaded', {
         message
@@ -250,9 +248,9 @@ io.on('connection', async (socket) => {
       if (!typingUsers.has(roomId)) {
         typingUsers.set(roomId, new Set());
       }
-      
+
       typingUsers.get(roomId).add(socket.userId);
-      
+
       socket.to(roomId).emit('typing_update', {
         roomId,
         userId: socket.userId,
@@ -269,7 +267,7 @@ io.on('connection', async (socket) => {
       const typingInRoom = typingUsers.get(roomId);
       if (typingInRoom) {
         typingInRoom.delete(socket.userId);
-        
+
         socket.to(roomId).emit('typing_update', {
           roomId,
           userId: socket.userId,
@@ -288,17 +286,17 @@ io.on('connection', async (socket) => {
 
     // Remove socket from tracking
     onlineUsers.delete(socket.id);
-    
+
     const userSocketSet = userSockets.get(socket.userId);
     if (userSocketSet) {
       userSocketSet.delete(socket.id);
-      
+
       // If user has no more active connections, update status
       if (userSocketSet.size === 0) {
         userSockets.delete(socket.userId);
-        
+
         try {
-          await User.findByIdAndUpdate(socket.userId, { 
+          await User.findByIdAndUpdate(socket.userId, {
             isOnline: false,
             lastSeen: new Date()
           });
