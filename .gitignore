@@ -1,26 +1,30 @@
-# Environment variables
+
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env
 
 
-# Dependencies
 node_modules/
 */node_modules/
 
-# Build outputs
+
 dist/
 build/
 *.log
 
-# Uploads
+
 backend/uploads/
 uploads/
 
-# Editor
+
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# OS
+
 .DS_Store
 Thumbs.db
