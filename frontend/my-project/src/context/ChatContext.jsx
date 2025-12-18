@@ -213,6 +213,10 @@ export const ChatProvider = ({ children }) => {
     setCurrentRoom(null);
   };
 
+  const closeChat = () => {
+    setCurrentRoom(null);
+  };
+
   const sendMessage = (content) => {
     const socket = getSocket();
     if (!socket || !currentRoom) return;
@@ -451,6 +455,7 @@ export const ChatProvider = ({ children }) => {
     users,
     joinRoom,
     leaveRoom,
+    closeChat,
     sendMessage,
     sendFileMessage,
     startTyping,
